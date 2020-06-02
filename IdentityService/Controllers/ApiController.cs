@@ -40,46 +40,10 @@ namespace IdentityService.Controllers
             // check the credentials
             if (await _userManager.CheckPasswordAsync(user, password))
             {
-                // Access Token
-                var claims = new List<Claim>
-                {
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    new Claim(JwtRegisteredClaimNames.Sub, user.Id)
-                };
-
-                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["AccessTokenKey"]));
-                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-                var accessToken = new JwtSecurityToken(
-                    issuer: _config["AccessTokenIssuer"],
-                    audience: _config["AccessTokenAudience"],
-                    claims: claims,
-                    expires: DateTime.Now.AddSeconds(Convert.ToDouble(_config["AccessTokenExpireSeconds"])),
-                    signingCredentials: creds
-                );
-
-                // Refresh Token
-                claims = new List<Claim>
-                {
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                    new Claim(TokenKey, user.Id + user.PasswordHash)
-                };
-
-                key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["RefreshTokenKey"]));
-                creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-                var refreshToken = new JwtSecurityToken(
-                    issuer: _config["RefreshIssuer"],
-                    audience: _config["RefreshAudience"],
-                    claims: claims,
-                    signingCredentials: creds
-                );
-
                 return Ok(new
                 {
-                    accessToken = new JwtSecurityTokenHandler().WriteToken(accessToken),
-                    refreshToken = new JwtSecurityTokenHandler().WriteToken(refreshToken)
+                    accessToken = new JwtSecurityTokenHandler().WriteToken(GenerateAccessToken(user)),
+                    refreshToken = new JwtSecurityTokenHandler().WriteToken(GenerateRefreshToken(user))
                 });
             }
             else return BadRequest(identityErrorDescriber.PasswordMismatch());
@@ -95,6 +59,80 @@ namespace IdentityService.Controllers
                 return await Login(email, password);
             }
             else return BadRequest(result.Errors.FirstOrDefault());
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RefreshAccessToken(string refreshToken)
+        {
+            var identityErrorDescriber = new IdentityErrorDescriber();
+            var tokenHandler = new JwtSecurityTokenHandler();
+            try
+            {
+                tokenHandler.ValidateToken(refreshToken, new TokenValidationParameters
+                {
+                    ValidIssuer = _config["RefreshTokenIssuer"],
+                    ValidAudience = _config["RefreshTokenAudience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["RefreshTokenKey"])),
+                }, out SecurityToken validatedToken);
+
+                var jwtValidatedToken = validatedToken as JwtSecurityToken;
+                var userId = jwtValidatedToken.Payload.Sub;
+                // get the user to refresh token
+                var user = await _userManager.FindByIdAsync(userId);
+
+                if (user == null) return BadRequest(identityErrorDescriber.InvalidToken());
+
+                return Ok(new
+                {
+                    accessToken = new JwtSecurityTokenHandler().WriteToken(GenerateAccessToken(user)),
+                });
+            }
+            catch
+            {
+                return BadRequest();
+            }
+        }
+
+        private JwtSecurityToken GenerateAccessToken(ApplicationUser user)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id)
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["AccessTokenKey"]));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            return new JwtSecurityToken(
+                issuer: _config["AccessTokenIssuer"],
+                audience: _config["AccessTokenAudience"],
+                claims: claims,
+                expires: DateTime.Now.AddMinutes(Convert.ToDouble(_config["AccessTokenExpireMinutes"])),
+                signingCredentials: creds
+            );
+        }
+
+        private JwtSecurityToken GenerateRefreshToken(ApplicationUser user)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+                new Claim(TokenKey, user.Id + user.PasswordHash)
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["RefreshTokenKey"]));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            return new JwtSecurityToken(
+                issuer: _config["RefreshTokenIssuer"],
+                audience: _config["RefreshTokenAudience"],
+                claims: claims,
+                expires: DateTime.Now.AddDays(Convert.ToDouble(_config["RefreshTokenExpireDays"])),
+                signingCredentials: creds
+            );
+
         }
     }
 }
