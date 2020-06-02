@@ -39,31 +39,46 @@ namespace IdentityService.Controllers
             // check the credentials
             if (await _userManager.CheckPasswordAsync(user, password))
             {
+                // Access Token
                 var claims = new List<Claim>
                 {
-                    new Claim(JwtRegisteredClaimNames.Sub, email),
-                    new Claim(JwtRegisteredClaimNames.Email, email),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    new Claim(JwtRegisteredClaimNames.Sub, user.Id)
                 };
 
-                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JwtKey"]));
+                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["AccessTokenKey"]));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-                var expires = DateTime.Now.AddDays(Convert.ToDouble(_config["JwtExpireDays"]));
 
-                var token = new JwtSecurityToken(
-                    issuer: _config["JwtIssuer"],
-                    audience: _config["JwtAudience"],
+                var accessToken = new JwtSecurityToken(
+                    issuer: _config["AccessTokenIssuer"],
+                    audience: _config["AccessTokenAudience"],
                     claims: claims,
-                    expires: expires,
+                    expires: DateTime.Now.AddSeconds(Convert.ToDouble(_config["AccessTokenExpireSeconds"])),
                     signingCredentials: creds
                 );
 
-                var userId = user.Id;
-                var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+                // Refresh Token
+                claims = new List<Claim>
+                {
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+                    new Claim("token_key", user.Id + user.PasswordHash)
+                };
+
+                key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["RefreshTokenKey"]));
+                creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+                var refreshToken = new JwtSecurityToken(
+                    issuer: _config["RefreshIssuer"],
+                    audience: _config["RefreshAudience"],
+                    claims: claims,
+                    signingCredentials: creds
+                );
+
                 return Ok(new
                 {
-                    id = userId,
-                    token = tokenString
+                    accessToken = new JwtSecurityTokenHandler().WriteToken(accessToken),
+                    refreshToken = new JwtSecurityTokenHandler().WriteToken(refreshToken)
                 });
             }
             else return BadRequest(identityErrorDescriber.PasswordMismatch());
