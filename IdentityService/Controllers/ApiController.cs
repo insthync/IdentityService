@@ -70,9 +70,9 @@ namespace IdentityService.Controllers
             {
                 tokenHandler.ValidateToken(refreshToken, new TokenValidationParameters
                 {
-                    ValidIssuer = _config["RefreshTokenIssuer"],
-                    ValidAudience = _config["RefreshTokenAudience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["RefreshTokenKey"])),
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:RefreshToken:Key"])),
+                    ValidIssuer = _config["JWT:RefreshToken:Issuer"],
+                    ValidAudience = _config["JWT:RefreshToken:Audience"],
                 }, out SecurityToken validatedToken);
 
                 var jwtValidatedToken = validatedToken as JwtSecurityToken;
@@ -101,14 +101,16 @@ namespace IdentityService.Controllers
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id)
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["AccessTokenKey"]));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:AccessToken:Key"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             return new JwtSecurityToken(
-                issuer: _config["AccessTokenIssuer"],
-                audience: _config["AccessTokenAudience"],
+                issuer: _config["JWT:AccessToken:Issuer"],
+                audience: _config["JWT:AccessToken:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(Convert.ToDouble(_config["AccessTokenExpireMinutes"])),
+                expires: DateTime.Now.AddDays(Convert.ToDouble(_config["JWT:AccessToken:ExpireDays"]))
+                    .AddHours(Convert.ToDouble(_config["JWT:AccessToken:ExpireHours"]))
+                    .AddMinutes(Convert.ToDouble(_config["JWT:AccessToken:ExpireMinutes"])),
                 signingCredentials: creds
             );
         }
@@ -122,14 +124,16 @@ namespace IdentityService.Controllers
                 new Claim(TokenKey, user.Id + user.PasswordHash)
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["RefreshTokenKey"]));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:RefreshToken:Key"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             return new JwtSecurityToken(
-                issuer: _config["RefreshTokenIssuer"],
-                audience: _config["RefreshTokenAudience"],
+                issuer: _config["JWT:RefreshToken:Issuer"],
+                audience: _config["JWT:RefreshToken:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddDays(Convert.ToDouble(_config["RefreshTokenExpireDays"])),
+                expires: DateTime.Now.AddDays(Convert.ToDouble(_config["JWT:RefreshToken:ExpireDays"]))
+                    .AddHours(Convert.ToDouble(_config["JWT:RefreshToken:ExpireHours"]))
+                    .AddMinutes(Convert.ToDouble(_config["JWT:RefreshToken:ExpireMinutes"])),
                 signingCredentials: creds
             );
 
