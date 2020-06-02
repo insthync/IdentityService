@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using IdentityService.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -16,11 +17,11 @@ namespace IdentityService.Controllers
     public class ApiController : ControllerBase
     {
         private readonly IConfiguration _config;
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public ApiController(
             IConfiguration config,
-            UserManager<IdentityUser> userManager)
+            UserManager<ApplicationUser> userManager)
         {
             _config = config;
             _userManager = userManager;
@@ -70,7 +71,7 @@ namespace IdentityService.Controllers
         [HttpPost]
         public async Task<IActionResult> Register(string email, string password)
         {
-            var user = new IdentityUser { UserName = email, Email = email };
+            var user = new ApplicationUser { UserName = email, Email = email };
             var result = await _userManager.CreateAsync(user, password);
             if (result == IdentityResult.Success)
             {

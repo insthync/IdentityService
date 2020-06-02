@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using IdentityService.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -18,8 +19,8 @@ namespace IdentityService.Data
         {
             base.OnModelCreating(builder);
 
-            builder.Entity<IdentityUser>().ToTable("users");
-            builder.Entity<IdentityUser>(entity => {
+            builder.Entity<ApplicationUser>().ToTable("users");
+            builder.Entity<ApplicationUser>(entity => {
                 entity.Property(m => m.Id).HasMaxLength(127);
                 entity.Property(m => m.Email).HasMaxLength(127);
                 entity.Property(m => m.NormalizedEmail).HasMaxLength(127);

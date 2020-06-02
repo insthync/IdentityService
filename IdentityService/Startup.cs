@@ -3,10 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.EntityFrameworkCore;
 using IdentityService.Data;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +13,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using IdentityService.Models;
 
 namespace IdentityService
 {
@@ -36,7 +34,7 @@ namespace IdentityService
                 options.UseMySql(
                     Configuration.GetConnectionString("DefaultConnection")));
             // Identity
-            services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
+            services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();
             // JWT
             JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
