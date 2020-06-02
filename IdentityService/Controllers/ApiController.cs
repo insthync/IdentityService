@@ -46,7 +46,7 @@ namespace IdentityService.Controllers
 
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JwtKey"]));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-                var expires = DateTime.Now.AddSeconds(Convert.ToDouble(_config["JwtExpireSeconds"]));
+                var expires = DateTime.Now.AddDays(Convert.ToDouble(_config["JwtExpireDays"]));
 
                 var token = new JwtSecurityToken(
                     issuer: _config["JwtIssuer"],
@@ -56,7 +56,13 @@ namespace IdentityService.Controllers
                     signingCredentials: creds
                 );
 
-                return Ok(new JwtSecurityTokenHandler().WriteToken(token));
+                var userId = user.Id;
+                var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+                return Ok(new
+                {
+                    id = userId,
+                    token = tokenString
+                });
             }
             else return BadRequest(identityErrorDescriber.PasswordMismatch());
         }
