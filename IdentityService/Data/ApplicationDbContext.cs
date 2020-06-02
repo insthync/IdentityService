@@ -8,9 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService.Data
 {
-    public class ApplicationDbContext : IdentityDbContext
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        public ApplicationDbContext(DbContextOptions options)
             : base(options)
         {
         }
