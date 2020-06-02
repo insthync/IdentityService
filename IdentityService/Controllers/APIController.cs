@@ -5,12 +5,9 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityService.Controllers
@@ -32,10 +29,11 @@ namespace IdentityService.Controllers
         [HttpPost]
         public async Task<IActionResult> Login(string email, string password)
         {
+            var identityErrorDescriber = new IdentityErrorDescriber();
             // get the user to verifty
-            var user = await _userManager.FindByNameAsync(email);
+            var user = await _userManager.FindByEmailAsync(email);
 
-            if (user == null) return BadRequest();
+            if (user == null) return BadRequest(identityErrorDescriber.InvalidEmail(email));
 
             // check the credentials
             if (await _userManager.CheckPasswordAsync(user, password))
@@ -60,19 +58,19 @@ namespace IdentityService.Controllers
 
                 return Ok(new JwtSecurityTokenHandler().WriteToken(token));
             }
-            else return BadRequest();
+            else return BadRequest(identityErrorDescriber.PasswordMismatch());
         }
 
         [HttpPost]
-        public async Task<IActionResult> Register(string username, string email, string password)
+        public async Task<IActionResult> Register(string email, string password)
         {
-            var user = new IdentityUser { UserName = username, Email = email };
+            var user = new IdentityUser { UserName = email, Email = email };
             var result = await _userManager.CreateAsync(user, password);
             if (result == IdentityResult.Success)
             {
                 return await Login(email, password);
             }
-            else return BadRequest();
+            else return BadRequest(result.Errors.FirstOrDefault());
         }
     }
 }
