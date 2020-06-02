@@ -15,14 +15,13 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityService.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]/[action]")]
-    public class APIController : ControllerBase
+    [Route("[controller]/[action]")]
+    public class ApiController : ControllerBase
     {
         private readonly IConfiguration _config;
         private readonly UserManager<IdentityUser> _userManager;
 
-        public APIController(
+        public ApiController(
             IConfiguration config,
             UserManager<IdentityUser> userManager)
         {
@@ -31,7 +30,7 @@ namespace IdentityService.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Login([FromBody] string email, [FromBody] string password)
+        public async Task<IActionResult> Login(string email, string password)
         {
             // get the user to verifty
             var user = await _userManager.FindByNameAsync(email);
@@ -65,7 +64,7 @@ namespace IdentityService.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Register([FromBody] string username, [FromBody] string email, [FromBody] string password)
+        public async Task<IActionResult> Register(string username, string email, string password)
         {
             var user = new IdentityUser { UserName = username, Email = email };
             var result = await _userManager.CreateAsync(user, password);
