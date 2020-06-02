@@ -16,6 +16,7 @@ namespace IdentityService.Controllers
     [Route("[controller]/[action]")]
     public class ApiController : ControllerBase
     {
+        public const string TokenKey = "token_key";
         private readonly IConfiguration _config;
         private readonly UserManager<ApplicationUser> _userManager;
 
@@ -62,7 +63,7 @@ namespace IdentityService.Controllers
                 {
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                     new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                    new Claim("token_key", user.Id + user.PasswordHash)
+                    new Claim(TokenKey, user.Id + user.PasswordHash)
                 };
 
                 key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["RefreshTokenKey"]));
