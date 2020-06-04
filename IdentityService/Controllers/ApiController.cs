@@ -80,7 +80,8 @@ namespace IdentityService.Controllers
                 // get the user to refresh token
                 var user = await _userManager.FindByIdAsync(userId);
 
-                if (user == null) return BadRequest(identityErrorDescriber.InvalidToken());
+                if (user == null || !(user.Id + user.PasswordHash).Equals(jwtValidatedToken.Payload[TokenKey]))
+                    return BadRequest(identityErrorDescriber.InvalidToken());
 
                 return Ok(new
                 {
