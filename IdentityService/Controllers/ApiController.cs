@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 
 namespace IdentityService.Controllers
 {
@@ -17,6 +19,8 @@ namespace IdentityService.Controllers
     public class ApiController : ControllerBase
     {
         public const string TokenKey = "token_key";
+        public const string FacebookProvider = "Facebook";
+        public const string GoogleProvider = "Google";
         private readonly IConfiguration _config;
         private readonly UserManager<ApplicationUser> _userManager;
 
@@ -52,13 +56,84 @@ namespace IdentityService.Controllers
         [HttpPost]
         public async Task<IActionResult> Register(string email, string password)
         {
-            var user = new ApplicationUser { UserName = email, Email = email };
+            var user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email
+            };
             var result = await _userManager.CreateAsync(user, password);
             if (result == IdentityResult.Success)
             {
                 return await Login(email, password);
             }
             else return BadRequest(result.Errors.FirstOrDefault());
+        }
+
+        
+        [HttpPost]
+        public async Task<IActionResult> LoginWithFacebook(string id, string accessToken)
+        {
+            var identityErrorDescriber = new IdentityErrorDescriber();
+            // Validate facebook login at facebok :P
+            var validateUrl = "https://graph.facebook.com/" + id + "?access_token=" + accessToken + "&fields=name,email";
+            var webClient = new WebClient();
+            var validateResultText = await webClient.DownloadStringTaskAsync(validateUrl);
+            validateResultText = validateResultText.Replace(@"\u0040", "@");
+            var validateResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(validateResultText);
+            if (validateResult.ContainsKey("email"))
+            {
+                var name = (string)validateResult["name"];
+                var email = (string)validateResult["email"];
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user != null)
+                {
+                    // Found user, adding login
+                    var logins = await _userManager.GetLoginsAsync(user);
+                    if (GetLoginInfoByProvider(logins, FacebookProvider, id) == null)
+                    {
+                        // Add new login for the user
+                        var addLoginResult = await _userManager.AddLoginAsync(user, new UserLoginInfo(FacebookProvider, id, name));
+                        if (!addLoginResult.Succeeded)
+                        {
+                            // Error occurs
+                            return BadRequest(addLoginResult.Errors.FirstOrDefault());
+                        }
+                    }
+                }
+                else
+                {
+                    // Create new user by id and email
+                    user = new ApplicationUser()
+                    {
+                        UserName = email,
+                        Email = email,
+                        EmailConfirmed = true
+                    };
+                    var createUserResult = await _userManager.CreateAsync(user);
+                    if (!createUserResult.Succeeded)
+                    {
+                        // Error occurs
+                        return BadRequest(createUserResult.Errors.FirstOrDefault());
+                    }
+                    else
+                    {
+                        // Add new login for the user
+                        var addLoginResult = await _userManager.AddLoginAsync(user, new UserLoginInfo(FacebookProvider, id, name));
+                        if (!addLoginResult.Succeeded)
+                        {
+                            // Error occurs
+                            return BadRequest(addLoginResult.Errors.FirstOrDefault());
+                        }
+                    }
+                }
+                // Login success
+                return Ok(new
+                {
+                    accessToken = new JwtSecurityTokenHandler().WriteToken(GenerateAccessToken(user)),
+                    refreshToken = new JwtSecurityTokenHandler().WriteToken(GenerateRefreshToken(user))
+                });
+            }
+            else return BadRequest(identityErrorDescriber.InvalidToken());
         }
 
         [HttpPost]
@@ -81,7 +156,10 @@ namespace IdentityService.Controllers
                 var user = await _userManager.FindByIdAsync(userId);
 
                 if (user == null || !(user.Id + user.PasswordHash).Equals(jwtValidatedToken.Payload[TokenKey]))
+                {
+                    // User not found or user password changed, then the token revoked, so it's invalid token
                     return BadRequest(identityErrorDescriber.InvalidToken());
+                }
 
                 return Ok(new
                 {
@@ -92,6 +170,17 @@ namespace IdentityService.Controllers
             {
                 return BadRequest();
             }
+        }
+
+        private UserLoginInfo GetLoginInfoByProvider(IList<UserLoginInfo> logins, string provider, string providerKey)
+        {
+            foreach (var login in logins)
+            {
+                if (login.LoginProvider.Equals(provider) &&
+                    login.ProviderKey.Equals(providerKey))
+                    return login;
+            }
+            return null;
         }
 
         private JwtSecurityToken GenerateAccessToken(ApplicationUser user)
@@ -118,6 +207,7 @@ namespace IdentityService.Controllers
 
         private JwtSecurityToken GenerateRefreshToken(ApplicationUser user)
         {
+            // TODO: It not have to be JWT, may use other function which may faster
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
