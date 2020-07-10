@@ -30,9 +30,25 @@ namespace IdentityService
         public void ConfigureServices(IServiceCollection services)
         {
             // Database
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseMySql(
-                    Configuration.GetConnectionString("DefaultConnection")));
+            string dbOption = Configuration[OptionConsts.KEY_DB_OPTION];
+            if (dbOption.Equals(OptionConsts.DB_OPTION_PGSQL))
+            {
+                services.AddDbContext<ApplicationDbContext>(options =>
+                    options.UseNpgsql(
+                        Configuration.GetConnectionString(OptionConsts.KEY_CONNECTION_STRING_PGSQL)));
+            }
+            else if (dbOption.Equals(OptionConsts.DB_OPTION_MYSQL))
+            {
+                services.AddDbContext<ApplicationDbContext>(options =>
+                    options.UseMySql(
+                        Configuration.GetConnectionString(OptionConsts.KEY_CONNECTION_STRING_MYSQL)));
+            }
+            else
+            {
+                services.AddDbContext<ApplicationDbContext>(options =>
+                    options.UseSqlServer(
+                        Configuration.GetConnectionString(OptionConsts.KEY_CONNECTION_STRING_MSSQL)));
+            }
             // Identity
             services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();
