@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService.Data
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string, ApplicationUserClaim, ApplicationUserRole, ApplicationUserLogin, ApplicationRoleClaim, ApplicationUserToken>
     {
         public ApplicationDbContext(DbContextOptions options)
             : base(options)
@@ -21,45 +21,27 @@ namespace IdentityService.Data
 
             builder.Entity<ApplicationUser>().ToTable("users");
             builder.Entity<ApplicationUser>(entity => {
-                entity.Property(m => m.Id).HasMaxLength(127);
-                entity.Property(m => m.Email).HasMaxLength(127);
-                entity.Property(m => m.NormalizedEmail).HasMaxLength(127);
-                entity.Property(m => m.NormalizedUserName).HasMaxLength(127);
-                entity.Property(m => m.UserName).HasMaxLength(127);
+                entity.Property(m => m.Email).HasMaxLength(128);
+                entity.Property(m => m.NormalizedEmail).HasMaxLength(128);
+                entity.Property(m => m.UserName).HasMaxLength(128);
+                entity.Property(m => m.NormalizedUserName).HasMaxLength(128);
             });
 
-            builder.Entity<IdentityUserClaim<string>>().ToTable("user_claims");
-
-            builder.Entity<IdentityUserLogin<string>>().ToTable("user_logins");
-            builder.Entity<IdentityUserLogin<string>>(entity =>
-            {
-                entity.Property(m => m.LoginProvider).HasMaxLength(127);
-                entity.Property(m => m.ProviderKey).HasMaxLength(127);
+            builder.Entity<ApplicationRole>().ToTable("roles");
+            builder.Entity<ApplicationRole>(entity => {
+                entity.Property(m => m.Name).HasMaxLength(128);
+                entity.Property(m => m.NormalizedName).HasMaxLength(128);
             });
 
-            builder.Entity<IdentityUserRole<string>>().ToTable("user_roles");
-            builder.Entity<IdentityUserRole<string>>(entity =>
-            {
-                entity.Property(m => m.UserId).HasMaxLength(127);
-                entity.Property(m => m.RoleId).HasMaxLength(127);
-            });
+            builder.Entity<ApplicationUserClaim>().ToTable("user_claims");
 
-            builder.Entity<IdentityUserToken<string>>().ToTable("user_tokens");
-            builder.Entity<IdentityUserToken<string>>(entity =>
-            {
-                entity.Property(m => m.UserId).HasMaxLength(127);
-                entity.Property(m => m.LoginProvider).HasMaxLength(127);
-                entity.Property(m => m.Name).HasMaxLength(127);
-            });
+            builder.Entity<ApplicationUserRole>().ToTable("user_roles");
 
-            builder.Entity<IdentityRole>().ToTable("roles");
-            builder.Entity<IdentityRole>(entity => {
-                entity.Property(m => m.Id).HasMaxLength(127);
-                entity.Property(m => m.Name).HasMaxLength(127);
-                entity.Property(m => m.NormalizedName).HasMaxLength(127);
-            });
+            builder.Entity<ApplicationUserLogin>().ToTable("user_logins");
 
-            builder.Entity<IdentityRoleClaim<string>>().ToTable("role_claims");
+            builder.Entity<ApplicationRoleClaim>().ToTable("role_claims");
+
+            builder.Entity<ApplicationUserToken>().ToTable("user_tokens");
         }
     }
 }

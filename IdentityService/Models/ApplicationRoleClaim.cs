@@ -7,14 +7,9 @@ using System.Threading.Tasks;
 
 namespace IdentityService.Models
 {
-    public class ApplicationUser : IdentityUser
+    public class ApplicationRoleClaim : IdentityRoleClaim<string>
     {
         [MaxLength(36)]
-        public override string Id { get => base.Id; set => base.Id = value; }
-
-        public ApplicationUser()
-        {
-            Id = Nanoid.Nanoid.Generate(size: 36);
-        }
+        public override string RoleId { get => base.RoleId; set => base.RoleId = value; }
     }
 }
